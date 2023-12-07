@@ -30,23 +30,11 @@ class RedmineOauthController < AccountController
     oauth_csrf_token = generate_csrf_token
     session[:oauth_csrf_token] = oauth_csrf_token
     case Setting.plugin_redmine_oauth[:oauth_name]
-    when 'Azure AD'
-      redirect_to oauth_client.auth_code.authorize_url(
-        redirect_uri: oauth_callback_url,
-        state: oauth_csrf_token,
-        scope: 'user:email'
-      )
-    when 'GitLab'
+    when 'Toolbox'
       redirect_to oauth_client.auth_code.authorize_url(
         redirect_uri: oauth_callback_url,
         state: oauth_csrf_token,
         scope: 'read_user'
-      )
-    when 'Okta'
-      redirect_to oauth_client.auth_code.authorize_url(
-        redirect_uri: oauth_callback_url,
-        state: oauth_csrf_token,
-        scope: 'openid profile email'
       )
     else
       flash['error'] = l(:oauth_invalid_provider)
@@ -59,27 +47,14 @@ class RedmineOauthController < AccountController
   end
 
   def oauth_callback
-    raise StandardError, l(:notice_access_denied) if params['error']
+    raise StandardError, l(:oauth_notice_access_denied) if params['error']
 
     case Setting.plugin_redmine_oauth[:oauth_name]
-    when 'Azure AD'
+    when 'Toolbox'
       token = oauth_client.auth_code.get_token(params['code'], redirect_uri: oauth_callback_url)
-      user_info = JWT.decode(token.token, nil, false).first
-      email = user_info['unique_name']
-    when 'GitLab'
-      token = oauth_client.auth_code.get_token(params['code'], redirect_uri: oauth_callback_url)
-      userinfo_response = token.get('/api/v4/user', headers: { 'Accept' => 'application/json' })
+      userinfo_response = token.get('/api/v1/me', headers: { 'Accept' => 'application/json' })
       user_info = JSON.parse(userinfo_response.body)
-      user_info['login'] = user_info['username']
-      email = user_info['email']
-    when 'Okta'
-      token = oauth_client.auth_code.get_token(params['code'], redirect_uri: oauth_callback_url)
-      userinfo_response = token.get(
-        "/oauth2/#{Setting.plugin_redmine_oauth[:tenant_id]}/v1/userinfo",
-        headers: { 'Accept' => 'application/json' }
-      )
-      user_info = JSON.parse(userinfo_response.body)
-      user_info['login'] = user_info['preferred_username']
+      user_info['login'] = user_info['email']
       email = user_info['email']
     else
       raise StandardError, l(:oauth_invalid_provider)
@@ -151,29 +126,13 @@ class RedmineOauthController < AccountController
 
     @client =
       case Setting.plugin_redmine_oauth[:oauth_name]
-      when 'Azure AD'
-        OAuth2::Client.new(
-          Setting.plugin_redmine_oauth[:client_id],
-          Setting.plugin_redmine_oauth[:client_secret],
-          site: site,
-          authorize_url: "/#{Setting.plugin_redmine_oauth[:tenant_id]}/oauth2/authorize",
-          token_url: "/#{Setting.plugin_redmine_oauth[:tenant_id]}/oauth2/token"
-        )
-      when 'GitLab'
+      when 'Toolbox'
         OAuth2::Client.new(
           Setting.plugin_redmine_oauth[:client_id],
           Setting.plugin_redmine_oauth[:client_secret],
           site: site,
           authorize_url: '/oauth/authorize',
           token_url: '/oauth/token'
-        )
-      when 'Okta'
-        OAuth2::Client.new(
-          Setting.plugin_redmine_oauth[:client_id],
-          Setting.plugin_redmine_oauth[:client_secret],
-          site: site,
-          authorize_url: "/oauth2/#{Setting.plugin_redmine_oauth[:tenant_id]}/v1/authorize",
-          token_url: "/oauth2/#{Setting.plugin_redmine_oauth[:tenant_id]}/v1/token"
         )
       else
         raise StandardError, l(:oauth_invalid_provider)

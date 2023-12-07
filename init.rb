@@ -24,9 +24,9 @@ require File.expand_path('lib/redmine_oauth/hooks', __dir__)
 Redmine::Plugin.register :redmine_oauth do
   name 'Redmine OAuth plugin'
   author 'Karel Pičman'
-  description 'Redmine OAuth plugin'
+  description 'Redmine OAuth plugin with edits for toolbox OAuth provider'
   version '2.1.3'
-  url 'https://github.com/kontron/redmine_oauth'
+  url 'https://github.com/bokos/redmine_oauth'
   author_url 'https://github.com/kontron/redmine_oauth/graphs/contributors'
 
   requires_redmine version_or_higher: '5.1.0'
