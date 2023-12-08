@@ -40,4 +40,6 @@ Redmine::Plugin.register :redmine_oauth do
     button_color: '#ffbe6f',
     button_icon: 'fas fa-address-card'
   }, partial: 'settings/oauth_settings'
+
+  ApplicationController.include RedmineOauth::ApplicationControllerPatch
 end
